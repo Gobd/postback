@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
 	"os"
+	"strings"
 
 	"gopkg.in/redis.v4"
 )
@@ -17,22 +18,77 @@ func redisClient() *redis.Client {
 	return client
 }
 
-var errLog *os.File
-var logger *log.Logger
-
-func startLogger() {
-	errLog, err := os.OpenFile(errLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+func makeLogger(file string) {
+	errorLog, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		fmt.Printf("error opening file: %v", err)
-		os.Exit(1)
+		panic("error opening file")
 	}
-	logger = log.New(errLog, "applog: ", log.Lshortfile|log.LstdFlags)
-	return logger
+	log.SetOutput(errorLog)
+}
+
+type request struct {
+	Endpoint endpointData        `json:"endpoint"`
+	Data     []map[string]string `json:"data"`
+}
+
+type endpointData struct {
+	Method string `json:"method"`
+	URL    string `json:"url"`
+}
+
+// hopefully this is good mock data, intended to represent what Redis will give me when I BLPop data
+const input = `
+{
+	"endpoint": {
+	"method":"GET",
+	"url":"http://sample_domain_endpoint.com/data?key={key}&value={value}&foo={bar}"
+},
+	"data": [
+	{
+		"key":"Azureus",
+		"value":"Dendrobates"
+	},
+	{
+		"key":"Phyllobates",
+		"value":"Terribilis"
+	}
+	]
+}`
+
+func braceReplace(key, val string) (string, string) {
+	return key + "={" + key + "}", key + "=" + val
+}
+
+func getReq(decodedJSON request) []string {
+	var getSlice []string
+	for _, dataSet := range decodedJSON.Data {
+		formattedURL := decodedJSON.Endpoint.URL
+		for key, val := range dataSet {
+			old, new := braceReplace(key, val)
+			formattedURL = strings.Replace(formattedURL, old, new, 1)
+		}
+		getSlice = append(getSlice, formattedURL)
+	}
+	return getSlice
+}
+
+func postReq(decodedJSON request) {
+
 }
 
 func main() {
-	fmt.Println("hey")
 	client := redisClient()
-	logFile := setupLogger()
-
+	makeLogger("go.log")
+	var decodedJSON request
+	jsonErr := json.Unmarshal([]byte(input), &decodedJSON)
+	getURL := getReq(decodedJSON)
+	if jsonErr != nil {
+		panic(jsonErr)
+	}
+	// fmt.Println("METHOD ", decodedJSON.Endpoint.Method)
+	// fmt.Println("URL ", decodedJSON.Endpoint.URL)
+	_, errPing := client.Ping().Result()
+	if errPing != nil {
+		log.Println("Connected to database.")
+	}
 }

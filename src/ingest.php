@@ -1,8 +1,8 @@
 <?php
-$json = file_get_contents('php://input');
+$json = file_get_contents("php://input");
 $decoded = json_decode($json, true);
 $redis = new Redis();
-$connection = $redis->connect('127.0.0.1', 6400);
+$connection = $redis->connect("127.0.0.1", 6400);
 
 $headers = json_encode(apache_request_headers());
 
@@ -10,7 +10,7 @@ $date = new DateTime();
 $date = $date->format("y:m:d h:i:s");
 
 /*
-IF LOGGING ISN'T WORKING THEN CREATE A PHP.LOG AND 'sudo chmod 777 php.log'
+IF LOGGING ISN"T WORKING THEN CREATE A PHP.LOG AND "sudo chmod 777 php.log"
 That should fix it
 */
 
@@ -23,17 +23,18 @@ if (json_last_error()) {
 	return error_log("{$date} Error deconding: {$decodingError} from {$headers}" . PHP_EOL, 3, "/var/www/html/php.log");
 }
 
-if (!isset($decoded['data']) || !isset($decoded['endpoint'])) {
+if (!isset($decoded["data"]) || !isset($decoded["endpoint"])) {
 	return error_log("{$date} JSON: {$json} is missing either the 'endpont' or 'data' field from {$headers}" . PHP_EOL, 3, "/var/www/html/php.log");
 }
 
-foreach($decoded['data'] as & $data) {
+// why are we even doing this, seems like we could just push the data into Redis
+foreach($decoded["data"] as & $data) {
 	$postback = array(
-		"endpoint" => $decoded['endpoint'],
+		"endpoint" => $decoded["endpoint"],
 		"data" => $data,
 	);
 	$dataToPush = json_encode($postback);
-	$dataSuccess = $redis->rPush('requests', $dataToPush);
+	$dataSuccess = $redis->rPush("requests", $dataToPush);
 	if (!$dataSuccess) {
 		error_log("{$date} Error pushing data to Redis: {$dataSuccess} from {$headers}" . PHP_EOL, 3, "/var/www/html/php.log");
 	}
