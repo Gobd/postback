@@ -2,10 +2,6 @@
 
 ### Kochava Miniproject :: "Postback Delivery"
 
-##### Description:
-
-Congratulations on participating in the Kochava "Postback Delivery" miniproject! You will be building a webapp to function as a small scale simulation of how we at Kochava synchronize data with third-party partners.
-
 ##### Instructions:
 1. Provision provided linux server (see Resources - Server) with software stack required to complete project.
 2. Change default redis port immediately on startup
