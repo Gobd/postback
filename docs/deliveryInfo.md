@@ -9,8 +9,6 @@
 
 ##### Ingestion Agent Info
 
-The delivery agent's log file can be cahnge by passing in a different argument to the `makeLogger` function.
+The delivery agent's log file can be changed by passing in a different argument to the `makeLogger` function.
 
 It logs everything to this one file, both info and errors.
-
-Build with `go build src/deliverygo`, then move the file into the `src` folder, and run with `src/delivery`

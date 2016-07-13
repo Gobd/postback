@@ -6,6 +6,13 @@ sudo apt-get update
 sudo apt-get upgrade
 ```
 
+### Install Node
+Only if you want to run the Express server to be sure that things are working
+```shell
+curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
 ### Install Redis
 ```shell
 sudo apt-get -y install redis-server
