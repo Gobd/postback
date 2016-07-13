@@ -12,18 +12,18 @@
 ##### Extra Merit:
 - [x] Clean, descriptive VCS commit history.
 - [x] Clean, easy-to-follow support documentation for an engineer attempting to troubleshoot your system.
-- [ ] All services should be configured to run automatically, and service should remain functional after system restarts.
+- [x] All services should be configured to run automatically, and service should remain functional after system restarts.
 - [ ] High availability infrastructure considerations.
 - [ ] Data integrity considerations, including safe shutdown.
-- [ ] Modular code design.
-- [ ] Configurable default value for unmatched url {key}s.
+- [x] Modular code design.
+- [x] Configurable default value for unmatched url {key}s.
 - [ ] Performance of system under external load.
 - [ ] Performance of system with single request in infinite loop.
 - [ ] Minimal bandwidth utilization between ingestion and delivery servers.
 - [ ] Configurable response delivery retry attempts.
 - [x] Ingestion endpoint functional at /i in addition to /ingest.php.
 - [x] Data validation / error handling.
-- [ ] Ability to deliver POST (as well as GET) responses.
+- [x] Ability to deliver POST (as well as GET) responses.
 - [ ] Service monitoring / application profiling.
 - [ ] Delivery volume / success / failure visualizations.
 - [ ] Internal benchmarking tool.

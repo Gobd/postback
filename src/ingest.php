@@ -10,8 +10,8 @@ $date = new DateTime();
 $date = $date->format("y:m:d h:i:s");
 
 /*
-IF LOGGING ISN"T WORKING THEN CREATE A PHP.LOG AND "sudo chmod 777 php.log"
-That should fix it
+IF LOGGING ISN'T WORKING THEN CREATE A PHP.LOG AND "sudo chmod 777 php.log"
+Logging to a file probably isn't the best way, would be better to do something like ELK (Elastic, Logstash, Kibana)
 */
 
 if (!$connection) {
@@ -20,7 +20,7 @@ if (!$connection) {
 
 if (json_last_error()) {
 	$decodingError = json_last_error_msg();
-	return error_log("{$date} Error deconding: {$decodingError} from {$headers}" . PHP_EOL, 3, "/var/www/html/php.log");
+	return error_log("{$date} Error decoding: {$decodingError} from {$headers} with data {$json}" . PHP_EOL, 3, "/var/www/html/php.log");
 }
 
 if (!isset($decoded["data"]) || !isset($decoded["endpoint"])) {
@@ -35,7 +35,7 @@ foreach($decoded["data"] as & $data) {
 	$dataToPush = json_encode($postback);
 	$dataSuccess = $redis->rPush("requests", $dataToPush);
 	if (!$dataSuccess) {
-		error_log("{$date} Error pushing data to Redis: {$dataSuccess} from {$headers}" . PHP_EOL, 3, "/var/www/html/php.log");
+		error_log("{$date} Error pushing data to Redis: {$dataSuccess} from {$headers} with data {$decoded}" . PHP_EOL, 3, "/var/www/html/php.log");
 	}
 }
 
