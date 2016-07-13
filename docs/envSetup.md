@@ -74,10 +74,11 @@ sudo curl -O https://storage.googleapis.com/golang/go1.6.2.linux-amd64.tar.gz
 sudo tar -xf go1.6.2.linux-amd64.tar.gz
 sudo mv go /usr/local
 sudo nano ~/.profile
-    Add the line 'export PATH=$PATH:/usr/local/go/bin'
-source ~/.profile
-mkdir $HOME/work
-  export GOPATH=$HOME/work
+    Add the lines
+      'export PATH=$PATH:/usr/local/go/bin'
+      'export GOPATH=$HOME/work'
+       and run the go file last in this file
+  source ~/.profile
 go get gopkg.in/redis.v4  
 ```
 
