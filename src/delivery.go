@@ -6,10 +6,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/kardianos/osext"
 	"gopkg.in/redis.v4"
 )
 
@@ -23,8 +25,10 @@ func redisClient() *redis.Client {
 }
 
 // Logging to a file probably isn't the best way, would be better to do something like ELK (Elastic, Logstash, Kibana)
+// The package osext and command ExecutableFolder ensure that the log file is in the directory beside the executable
 func makeLogger(file string) {
-	dataLog, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	folderPath, _ := osext.ExecutableFolder()
+	dataLog, err := os.OpenFile(path.Join(folderPath, file), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		panic("Error opening logfile!")
 	}
@@ -71,24 +75,25 @@ func sendRequest(data request, timeStart time.Time) {
 	if data.Endpoint.Method == "GET" {
 		getURL := getReq(data)
 		resp, getErr := http.Get(getURL)
+		timeEnd = time.Now()
 		if getErr != nil {
-			log.Println("ERROR: ", time.Now(), "GET request error: ", getErr, "to URL: ", getURL)
+			log.Println("ERROR: ", time.Now(), "GET request error: ", getErr, "to URL: ", getURL, "with data:", getData)
 		} else {
-			// this needs to log delivery time, response code, response time, and response body logging
-			log.Println(resp)
+			defer resp.Body.Close()
+			log.Println("INFO: Delivered GET to:", getURL, "in", time.Since(timeStart), "at", time.Now(), "with response:", resp)
 		}
 	} else if data.Endpoint.Method == "POST" {
 		postURL, postData := postReq(data)
 		postDataJSON, _ := json.Marshal(postData)
 		resp, postErr := http.Post(postURL, "application/json", bytes.NewBuffer(postDataJSON))
 		if postErr != nil {
-			log.Println("ERROR: ", time.Now(), "GET request error: ", postErr, "to URL: ", postURL, "with data: ", postData)
+			log.Println("ERROR:", time.Now(), "POST request error:", postErr, "to URL:", postURL, "with data:", postData)
 		} else {
-			// this needs to log delivery time, response code, response time, and response body logging
-			log.Println(resp)
+			defer resp.Body.Close()
+			log.Println("INFO: Delivered POST to:", getURL, "in", time.Since(timeStart), "at", time.Now(), "with response:", resp)
 		}
 	} else {
-		log.Println("WARN: ", time.Now(), "Unknown HTTP method in data: ", data)
+		log.Println("WARN:", time.Now(), "Unknown HTTP method in data:", data)
 	}
 }
 
@@ -99,7 +104,7 @@ func main() {
 
 	_, errPing := client.Ping().Result()
 	if errPing != nil {
-		log.Println("ERROR: ", time.Now(), "Error connecting to Redis: ", errPing)
+		log.Println("ERROR:", time.Now(), "Error connecting to Redis:", errPing)
 	}
 
 	for {
@@ -110,10 +115,10 @@ func main() {
 			if jsonErr == nil {
 				sendRequest(decodedData, timeStart)
 			} else {
-				log.Println("ERROR: ", time.Now(), "Error decoding JSON from Redis: ", jsonErr)
+				log.Println("ERROR:", time.Now(), "Error decoding JSON from Redis:", jsonErr)
 			}
 		} else {
-			log.Println("ERROR: ", time.Now(), "Error popping data from Redis: ", errPop)
+			log.Println("ERROR:", time.Now(), "Error popping data from Redis:", errPop)
 		}
 	}
 }
