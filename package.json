@@ -1,0 +1,26 @@
+{
+  "name": "kochava",
+  "version": "1.0.0",
+  "description": "### Kochava Miniproject :: \"Postback Delivery\"",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gobd/postback.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Gobd/postback/issues"
+  },
+  "homepage": "https://github.com/Gobd/postback#readme",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "express": "^4.14.0"
+  }
+}
