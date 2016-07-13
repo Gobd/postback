@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"regexp"
 	"strings"
+	"time"
 
 	"gopkg.in/redis.v4"
 )
@@ -26,9 +31,10 @@ func makeLogger(file string) {
 	log.SetOutput(errorLog)
 }
 
+// these structs mirror the JSON struture that Redis will give us
 type request struct {
-	Endpoint endpointData        `json:"endpoint"`
-	Data     []map[string]string `json:"data"`
+	Endpoint endpointData      `json:"endpoint"`
+	Data     map[string]string `json:"data"`
 }
 
 type endpointData struct {
@@ -36,59 +42,64 @@ type endpointData struct {
 	URL    string `json:"url"`
 }
 
-// hopefully this is good mock data, intended to represent what Redis will give me when I BLPop data
-const input = `
-{
-	"endpoint": {
-	"method":"GET",
-	"url":"http://sample_domain_endpoint.com/data?key={key}&value={value}&foo={bar}"
-},
-	"data": [
-	{
-		"key":"Azureus",
-		"value":"Dendrobates"
-	},
-	{
-		"key":"Phyllobates",
-		"value":"Terribilis"
-	}
-	]
-}`
-
 func braceReplace(key, val string) (string, string) {
 	return key + "={" + key + "}", key + "=" + val
 }
 
-func getReq(decodedJSON request) []string {
-	var getSlice []string
-	for _, dataSet := range decodedJSON.Data {
-		formattedURL := decodedJSON.Endpoint.URL
-		for key, val := range dataSet {
-			old, new := braceReplace(key, val)
-			formattedURL = strings.Replace(formattedURL, old, new, 1)
-		}
-		getSlice = append(getSlice, formattedURL)
+// returns url that should recieve get requests
+func getReq(decodedJSON request) string {
+	removeEmptyBraceRegex := regexp.MustCompile("{[[:word:]]*}")
+	formattedURL := decodedJSON.Endpoint.URL
+	for key, val := range decodedJSON.Data {
+		old, new := braceReplace(key, val)
+		formattedURL = strings.Replace(formattedURL, old, new, 1)
 	}
-	return getSlice
+	formattedURL = removeEmptyBraceRegex.ReplaceAllString(formattedURL, "")
+	return formattedURL
 }
 
-func postReq(decodedJSON request) {
+// returns the url to post to, and the data to send with it
+func postReq(decodedJSON request) (string, map[string]string) {
+	return decodedJSON.Endpoint.URL, decodedJSON.Data
+}
 
+// checks the method in the request, then sends the request via the appropriate method
+// also logs time the request took, and pertinent information from the http response
+func sendRequest(data request, timeStart time.Time) {
+	if data.Endpoint.Method == "GET" {
+		getURL := getReq(data)
+		resp, err := http.Get(getURL)
+		fmt.Println("get resp", resp)
+		fmt.Println("get err", err)
+	} else if data.Endpoint.Method == "POST" {
+		postURL, postData := postReq(data)
+		postDataJSON, _ := json.Marshal(postData)
+		resp, err := http.Post(postURL, "application/json", bytes.NewBuffer(postDataJSON))
+		fmt.Println("post resp", resp)
+		fmt.Println("post err", err)
+	}
 }
 
 func main() {
 	client := redisClient()
 	makeLogger("go.log")
-	var decodedJSON request
-	jsonErr := json.Unmarshal([]byte(input), &decodedJSON)
-	getURL := getReq(decodedJSON)
-	if jsonErr != nil {
-		panic(jsonErr)
-	}
-	// fmt.Println("METHOD ", decodedJSON.Endpoint.Method)
-	// fmt.Println("URL ", decodedJSON.Endpoint.URL)
+
 	_, errPing := client.Ping().Result()
 	if errPing != nil {
 		log.Println("Connected to database.")
+	}
+
+	for {
+		if str, errPop := client.BLPop(0, "requests").Result(); errPop == nil {
+			timeStart := time.Now()
+			var decodedData request
+			jsonErr := json.Unmarshal([]byte(str[1]), &decodedData)
+			if jsonErr != nil {
+				panic(jsonErr)
+			}
+			sendRequest(decodedData, timeStart)
+		} else {
+			panic("Error popping")
+		}
 	}
 }
