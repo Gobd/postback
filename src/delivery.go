@@ -3,15 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/kardianos/osext"
 	"gopkg.in/redis.v4"
 )
 
@@ -25,10 +24,8 @@ func redisClient() *redis.Client {
 }
 
 // Logging to a file probably isn't the best way, would be better to do something like ELK (Elastic, Logstash, Kibana)
-// The package osext and command ExecutableFolder ensure that the log file is in the directory beside the executable
 func makeLogger(file string) {
-	folderPath, _ := osext.ExecutableFolder()
-	dataLog, err := os.OpenFile(path.Join(folderPath, file), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	dataLog, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		panic("Error opening logfile!")
 	}
@@ -75,12 +72,14 @@ func sendRequest(data request, timeStart time.Time) {
 	if data.Endpoint.Method == "GET" {
 		getURL := getReq(data)
 		resp, getErr := http.Get(getURL)
-		timeEnd = time.Now()
 		if getErr != nil {
-			log.Println("ERROR: ", time.Now(), "GET request error: ", getErr, "to URL: ", getURL, "with data:", getData)
+			log.Println("ERROR: ", time.Now(), "GET request error: ", getErr, "to URL: ", getURL)
 		} else {
 			defer resp.Body.Close()
-			log.Println("INFO: Delivered GET to:", getURL, "in", time.Since(timeStart), "at", time.Now(), "with response:", resp)
+			respTime := resp.Header.Get("Date")
+			respStatus := resp.StatusCode
+			respBody, _ := ioutil.ReadAll(resp.Body)
+			log.Println("INFO: Delivered GET to:", getURL, "in", time.Since(timeStart), "at", time.Now(), "with status:", respStatus, "with body:", string(respBody), "at time:", respTime)
 		}
 	} else if data.Endpoint.Method == "POST" {
 		postURL, postData := postReq(data)
@@ -90,7 +89,10 @@ func sendRequest(data request, timeStart time.Time) {
 			log.Println("ERROR:", time.Now(), "POST request error:", postErr, "to URL:", postURL, "with data:", postData)
 		} else {
 			defer resp.Body.Close()
-			log.Println("INFO: Delivered POST to:", getURL, "in", time.Since(timeStart), "at", time.Now(), "with response:", resp)
+			respTime := resp.Header.Get("Date")
+			respStatus := resp.StatusCode
+			respBody, _ := ioutil.ReadAll(resp.Body)
+			log.Println("INFO: Delivered POST to:", postURL, "in", time.Since(timeStart), "at", time.Now(), "with status:", respStatus, "with body:", string(respBody), "at time:", respTime)
 		}
 	} else {
 		log.Println("WARN:", time.Now(), "Unknown HTTP method in data:", data)
