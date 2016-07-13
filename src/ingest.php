@@ -27,7 +27,6 @@ if (!isset($decoded["data"]) || !isset($decoded["endpoint"])) {
 	return error_log("{$date} JSON: {$json} is missing either the 'endpont' or 'data' field from {$headers}" . PHP_EOL, 3, "/var/www/html/php.log");
 }
 
-// why are we even doing this, seems like we could just push the data into Redis
 foreach($decoded["data"] as & $data) {
 	$postback = array(
 		"endpoint" => $decoded["endpoint"],
